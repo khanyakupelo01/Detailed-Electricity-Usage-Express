@@ -8,3 +8,5 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: SIM_CLOUD_API_TOKEN
+        sync: false
