@@ -1,8 +1,10 @@
+
+---
 openapi: 3.0.0
 info:
   title: Electricity Dashboard 
   version: 1.0.0
-  description: This is a sample server for the Electricity Dashboard.
+  description: Server for the Electricity Dashboard
   termsOfService: https://e-tarrif-fe.onrender.com/terms/
   contact:
     name: Khanya Kupelo
@@ -210,4 +212,4 @@ components:
         - date
         - type
         - amount
-        
+...
