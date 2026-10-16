@@ -12,12 +12,10 @@ info:
   title: Electricity Dashboard
   version: 1.0.0
 servers:
-- description: Development server
-  url: https://e-tarrif-be.onrender.com/
-- description: Staging server
-  url: https://e-tarrif-be.onrender.com/
-- description: Production server
-  url: https://e-tarrif-be.onrender.com/
+- description: Current host (same origin as these docs)
+  url: /
+- description: Hosted server
+  url: https://e-tarrif-be.onrender.com
 - description: Local development server
   url: http://localhost:8080
 paths:
@@ -29,6 +27,7 @@ paths:
         in: query
         name: date_from
         required: true
+        example: '2026-09-10'
         schema:
           format: date
           type: string
@@ -37,6 +36,7 @@ paths:
         in: query
         name: date_to
         required: true
+        example: '2026-10-10'
         schema:
           format: date
           type: string
@@ -45,6 +45,7 @@ paths:
         in: query
         name: type
         required: false
+        example: 'purchase'
         schema:
           type: string
         style: form
@@ -52,6 +53,7 @@ paths:
         in: query
         name: limit
         required: false
+        example: 20
         schema:
           type: integer
         style: form
@@ -59,14 +61,21 @@ paths:
         in: query
         name: cursor
         required: false
+        example: 'abc123'
         schema:
           type: string
         style: form
       responses:
         "200":
           description: Successful response
+          content:
+            application/json:
+              example: {transactions: [{id: txn_001, date: "2026-09-10", type: purchase, amount: 250.5}, {id: txn_002, date: "2026-09-25", type: refund, amount: 45}], next_cursor: null}
         "400":
           description: Invalid request
+          content:
+            application/json:
+              example: {message: "request.query.date_from should match format \"date\"", errors: []}
         "503":
           description: Service unavailable
         "401":
@@ -87,12 +96,16 @@ paths:
         in: path
         name: id
         required: true
+        example: txn_001
         schema:
           type: string
         style: simple
       responses:
         "200":
           description: Successful response
+          content:
+            application/json:
+              example: {id: txn_001, date: "2026-09-10", type: purchase, amount: 250.5}
         "400":
           description: Invalid request
         "503":
@@ -115,10 +128,14 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/_api_transactions__post_request"
+            example: {date: "2026-09-10", type: purchase, amount: 250.5}
         required: true
       responses:
         "201":
           description: Transaction created successfully
+          content:
+            application/json:
+              example: {id: txn_001, date: "2026-09-10", type: purchase, amount: 250.5}
         "400":
           description: Invalid request
         "503":
@@ -141,6 +158,7 @@ paths:
         in: path
         name: id
         required: true
+        example: txn_001
         schema:
           type: string
         style: simple
@@ -169,6 +187,7 @@ paths:
         in: path
         name: id
         required: true
+        example: txn_001
         schema:
           type: string
         style: simple
@@ -177,10 +196,14 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/_api_transactions__post_request"
+            example: {date: "2026-09-10", type: purchase, amount: 250.5}
         required: true
       responses:
         "200":
           description: Transaction updated successfully
+          content:
+            application/json:
+              example: {id: txn_001, date: "2026-09-10", type: purchase, amount: 250.5}
         "400":
           description: Invalid request
         "503":
@@ -200,11 +223,14 @@ components:
     Transaction:
       properties:
         date:
+          example: "2026-09-10"
           format: date
           type: string
         type:
+          example: purchase
           type: string
         amount:
+          example: 250.5
           format: float
           type: number
       required:
@@ -215,11 +241,14 @@ components:
     _api_transactions__post_request:
       properties:
         date:
+          example: "2026-09-10"
           format: date
           type: string
         type:
+          example: purchase
           type: string
         amount:
+          example: 250.5
           format: float
           type: number
       required:

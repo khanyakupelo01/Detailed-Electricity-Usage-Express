@@ -27,7 +27,15 @@ class ExpressServer {
 
   setupMiddleware() {
     // this.setupAllowedMedia();
-    this.app.use(cors());
+    // Allow any origin (Swagger UI, the frontend, curl) and answer preflights before validation
+    const corsOptions = {
+      origin: true,
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+      maxAge: 86400,
+    };
+    this.app.use(cors(corsOptions));
+    this.app.options('*', cors(corsOptions));
     this.app.use(bodyParser.json({ limit: '14MB' }));
     this.app.use(express.json());
     this.app.use(express.urlencoded({ extended: false }));
