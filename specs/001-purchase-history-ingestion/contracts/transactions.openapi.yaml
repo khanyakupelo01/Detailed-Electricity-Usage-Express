@@ -1,0 +1,277 @@
+openapi: 3.0.0
+info:
+  title: Electricity Purchase Ingestion Contract
+  version: 1.0.0
+paths:
+  /api/transactions:
+    get:
+      summary: Retrieve transaction history
+      operationId: apiTransactionsGET
+      parameters:
+        - in: query
+          name: date_from
+          required: true
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: date_to
+          required: true
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: type
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Transaction history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionHistory'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/transactions/{id}:
+    get:
+      summary: Retrieve a transaction by ID
+      operationId: apiTransactionsIdGET
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Transaction found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionHistoryItem'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/transactions/:
+    post:
+      summary: Create an electricity purchase transaction
+      operationId: apiTransactionsPOST
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PurchaseTransactionInput'
+      responses:
+        '201':
+          description: Transaction stored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseTransaction'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: A transaction with the same meter, amount, and timestamp already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DuplicateTransaction'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    BadRequest:
+      description: Request is structurally invalid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Missing or invalid JWT bearer token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: Authenticated client is not authorized to ingest
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Transaction not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    UnprocessableEntity:
+      description: Transaction fields fail business validation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InternalServerError:
+      description: Unexpected persistence failure
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ServiceUnavailable:
+      description: Database temporarily unavailable
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  schemas:
+    TransactionHistory:
+      type: object
+      required:
+        - transactions
+        - next_cursor
+      properties:
+        transactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransactionHistoryItem'
+        next_cursor:
+          type: string
+          nullable: true
+    TransactionHistoryItem:
+      type: object
+      required:
+        - id
+        - date
+        - type
+        - amount
+        - timestamp
+      properties:
+        id:
+          type: string
+        date:
+          type: string
+          format: date
+        type:
+          type: string
+          enum:
+            - purchase
+        amount:
+          type: number
+        timestamp:
+          type: string
+          format: date-time
+    PurchaseTransactionInput:
+      type: object
+      additionalProperties: false
+      required:
+        - meterNumber
+        - amount
+        - timestamp
+        - type
+      properties:
+        meterNumber:
+          type: string
+          minLength: 1
+          example: '0001234567'
+        amount:
+          type: number
+          exclusiveMinimum: true
+          minimum: 0
+          example: 250.5
+        timestamp:
+          type: string
+          format: date-time
+          example: '2026-09-10T12:30:00+02:00'
+        type:
+          type: string
+          enum:
+            - purchase
+    PurchaseTransaction:
+      type: object
+      required:
+        - id
+        - meterNumber
+        - amount
+        - timestamp
+        - type
+      properties:
+        id:
+          type: string
+          example: '1001'
+        meterNumber:
+          type: string
+          example: '0001234567'
+        amount:
+          type: number
+          example: 250.5
+        timestamp:
+          type: string
+          format: date-time
+          example: '2026-09-10T12:30:00+02:00'
+        type:
+          type: string
+          enum:
+            - purchase
+    DuplicateTransaction:
+      type: object
+      required:
+        - code
+        - message
+        - transactionId
+      properties:
+        code:
+          type: string
+          enum:
+            - duplicate_transaction
+        message:
+          type: string
+        transactionId:
+          type: string
+    ErrorResponse:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        errors:
+          type: array
+          items:
+            type: string
