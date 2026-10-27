@@ -17,7 +17,7 @@ consumer migration is an external deployment prerequisite.
 **Purpose**: Add the minimal runtime dependencies needed for PostgreSQL and
 JWT-based authorization.
 
-- [ ] T001 Add `pg` and a JWT verification package compatible with the project's Node.js 10.6 baseline to `package.json` and `package-lock.json`; verify both install and runtime engine compatibility before selecting the package version.
+- [X] T001 Add `pg@8.13.1`, which supports Node.js 8 and later, to `package.json` and `package-lock.json`; use Node's built-in `crypto` module for JWT signature verification to preserve the documented Node.js 10.6 runtime without adding a stale or incompatible JWT dependency.
 
 ---
 
@@ -26,11 +26,11 @@ JWT-based authorization.
 **Purpose**: Establish configuration, persistence, the shared API contract, and
 authentication. These prerequisites block all user-story implementation.
 
-- [ ] T002 Add `DATABASE_URL`, `JWT_ISSUER`, `JWT_AUDIENCE`, and `JWT_PUBLIC_KEY` environment configuration in `config.js`; read values from the process environment and never log or hard-code credentials.
-- [ ] T003 [P] Create a PostgreSQL connection pool in `db/pool.js` using `DATABASE_URL`; export the pool for services and a clean shutdown method for process termination.
-- [ ] T004 [P] Create `db/migrations/001_create_purchase_transactions.up.sql` and `db/migrations/001_create_purchase_transactions.down.sql`; define a transaction table with generated `id`, required `meter_number` TEXT that rejects blank/whitespace values, required positive exact-decimal `amount` NUMERIC, required `transaction_timestamp` TIMESTAMPTZ, and `type` constrained to `purchase`; enforce UNIQUE `(meter_number, amount, transaction_timestamp)` and make rollback remove only objects introduced by this migration.
-- [ ] T005 [P] Update `api/openapi.yaml` with the POST request and response contract from `specs/001-purchase-history-ingestion/contracts/transactions.openapi.yaml`; require `meterNumber`, `amount`, `timestamp`, and `type=purchase`, declare JWT bearer security, and document 201, 400, 401, 403, 409, 422, 500, and 503 JSON outcomes.
-- [ ] T006 Implement the OpenAPI `bearerAuth` security handler in `expressServer.js`; verify JWT signature with RS256 only, validate issuer, audience, expiry/not-before, and non-empty subject using `config.js`, require `transactions:write` in the verified scope, return 401 for missing/invalid tokens and 403 for valid tokens without the scope, and do not pass unverified claims to services.
+- [X] T002 Add `DATABASE_URL`, `JWT_ISSUER`, `JWT_AUDIENCE`, and `JWT_PUBLIC_KEY` environment configuration in `config.js`; read values from the process environment and never log or hard-code credentials.
+- [X] T003 [P] Create a PostgreSQL connection pool in `db/pool.js` using `DATABASE_URL`; export the pool for services and a clean shutdown method for process termination.
+- [X] T004 [P] Create `db/migrations/001_create_purchase_transactions.up.sql` and `db/migrations/001_create_purchase_transactions.down.sql`; define a transaction table with generated `id`, required `meter_number` TEXT that rejects blank/whitespace values, required positive exact-decimal `amount` NUMERIC, required `transaction_timestamp` TIMESTAMPTZ, and `type` constrained to `purchase`; enforce UNIQUE `(meter_number, amount, transaction_timestamp)` and make rollback remove only objects introduced by this migration.
+- [X] T005 [P] Update `api/openapi.yaml` with the POST request and response contract from `specs/001-purchase-history-ingestion/contracts/transactions.openapi.yaml`; require `meterNumber`, `amount`, `timestamp`, and `type=purchase`, declare JWT bearer security, and document 201, 400, 401, 403, 409, 422, 500, and 503 JSON outcomes.
+- [X] T006 Implement the OpenAPI `bearerAuth` handler in `middleware/jwtSecurity.js` and wire it through this installed validator's `validateSecurity.handlers` option in `expressServer.js`; verify JWT signature with RS256 only, validate issuer, audience, expiry/not-before, and non-empty subject using `config.js`, require `transactions:write` in the verified scope, return 401 for missing/invalid tokens and 403 for valid tokens without the scope, and do not pass unverified claims to services.
 
 **Checkpoint**: Database connectivity, migration, request/response contract, and
 fail-closed client authorization are ready.
@@ -49,8 +49,8 @@ row created.
 
 ### Implementation for User Story 1
 
-- [ ] T007 [US1] Implement `apiTransactionsPOST` persistence in `services/ElectricityService.js`; insert the validated purchase through `db/pool.js`, wait for the database commit, and return HTTP 201 JSON with `id`, `meterNumber`, `amount`, `timestamp`, and `type` only after a successful insert.
-- [ ] T008 [US1] Implement `apiTransactionsGET` and `apiTransactionsIdGET` in `services/ElectricityService.js` using the persisted table; retain existing `id`, `date`, `type`, and `amount` response fields, add the full `timestamp`, and never include `meter_number` in unauthenticated read responses.
+- [X] T007 [US1] Implement `apiTransactionsPOST` persistence in `services/ElectricityService.js`; insert the validated purchase through `db/pool.js`, wait for the database commit, and return HTTP 201 JSON with `id`, `meterNumber`, `amount`, `timestamp`, and `type` only after a successful insert.
+- [X] T008 [US1] Implement `apiTransactionsGET` and `apiTransactionsIdGET` in `services/ElectricityService.js` using the persisted table; retain existing `id`, `date`, `type`, and `amount` response fields, add the full `timestamp`, and never include `meter_number` in unauthenticated read responses.
 
 **Checkpoint**: One valid purchase is durably stored and retrievable without
 changing the existing public read fields or exposing meter numbers.
@@ -70,7 +70,7 @@ stored.
 
 ### Implementation for User Story 2
 
-- [ ] T009 [US2] Update the insert path in `services/ElectricityService.js` to use `INSERT ... ON CONFLICT (meter_number, amount, transaction_timestamp) DO NOTHING RETURNING id`; when no row is returned, fetch the existing row by the same key and return HTTP 409 JSON with `code: "duplicate_transaction"`, a safe message, and its `transactionId`, without updating that row or treating unrelated database errors as duplicates.
+- [X] T009 [US2] Update the insert path in `services/ElectricityService.js` to use `INSERT ... ON CONFLICT (meter_number, amount, transaction_timestamp) DO NOTHING RETURNING id`; when no row is returned, fetch the existing row by the same key and return HTTP 409 JSON with `code: "duplicate_transaction"`, a safe message, and its `transactionId`, without updating that row or treating unrelated database errors as duplicates.
 
 **Checkpoint**: Repeated and concurrent submissions cannot create duplicates;
 distinct key combinations remain insertable.
@@ -89,7 +89,7 @@ the database remains unchanged.
 
 ### Implementation for User Story 3
 
-- [ ] T010 [US3] Add semantic validation and safe error mapping in `services/ElectricityService.js`; reject blank/whitespace `meterNumber`, amounts that are not finite positive monetary values, timestamps that are not ISO 8601 date-times with `Z` or an explicit offset, and any `type` other than `purchase`; return JSON 422 for semantic field errors, perform no insert on failure, and never expose PostgreSQL error text or stack traces.
+- [X] T010 [US3] Add semantic validation and safe error mapping in `services/ElectricityService.js`; reject blank/whitespace `meterNumber`, amounts that are not finite positive monetary values, timestamps that are not ISO 8601 date-times with `Z` or an explicit offset, and any `type` other than `purchase`; return JSON 422 for semantic field errors, perform no insert on failure, and never expose PostgreSQL error text or stack traces.
 
 **Checkpoint**: Invalid values and unauthorized clients receive clear JSON
 errors, and no rejected submission changes persisted data.
@@ -101,7 +101,7 @@ errors, and no rejected submission changes persisted data.
 **Purpose**: Document configuration and the intentional consumer migration
 gate before release.
 
-- [ ] T011 [P] Update `specs/001-purchase-history-ingestion/quickstart.md` and `README.md` with required environment variable names, migration apply/rollback instructions, JWT configuration requirements, documented response outcomes, and the prerequisite that separately maintained consumers migrate before the breaking POST contract is enforced; do not include secret values.
+- [X] T011 [P] Update `specs/001-purchase-history-ingestion/quickstart.md` and `README.md` with required environment variable names, migration apply/rollback instructions, JWT configuration requirements, documented response outcomes, and the prerequisite that separately maintained consumers migrate before the breaking POST contract is enforced; do not include secret values.
 
 ---
 

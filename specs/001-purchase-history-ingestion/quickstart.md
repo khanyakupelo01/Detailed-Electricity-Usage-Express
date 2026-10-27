@@ -9,9 +9,10 @@ sequence described in [research.md](./research.md).
 - Node.js version supported by the repository.
 - PostgreSQL instance and deployment-provided `DATABASE_URL`.
 - JWT issuer, audience, and verification key configured through deployment
-  secrets.
+  configuration.
 - A token whose verified `scope` includes `transactions:write`.
-- A valid JWT for an authorized ingestion client.
+- A valid JWT for an authorized ingestion client with non-empty `sub`, matching
+  `iss` and `aud`, and a future `exp`.
 - Consumer applications migrated to the updated request contract before the
   backend begins requiring it.
 
@@ -38,10 +39,11 @@ curl -i -X POST http://localhost:8080/api/transactions/ \
 ```
 
 Expected outcome: HTTP 201 JSON with a stored transaction identifier, meter
-number, amount, timestamp, and `purchase` type.
+number, amount, timestamp, date, and `purchase` type.
 
-Repeat the exact request. Expected outcome: HTTP 409 JSON identifies the
-existing transaction; a database lookup confirms that only one row exists.
+Repeat the exact request. Expected outcome: HTTP 409 JSON contains
+`code: "duplicate_transaction"` and the existing `transactionId`; a database
+lookup confirms that only one row exists.
 
 Try a missing meter number, a zero or negative amount, and a timestamp without
 a timezone. Expected outcome: the request is rejected with a JSON 400 or 422

@@ -67,11 +67,12 @@ money.
 ### JWT authentication
 
 **Decision**: Declare an HTTP bearer security scheme in OpenAPI and enforce it
-through `express-openapi-validator` security handlers. Verify JWT signature and
-standard time claims using an explicit algorithm allowlist (RS256), require
-issuer, audience, client subject, and a `transactions:write` scope. Configure
-the public verification key and expected issuer/audience via deployment
-secrets/configuration. Do not expose meter numbers from the existing
+through the installed `express-openapi-validator` version's
+`validateSecurity.handlers` option. Verify JWT signature with Node's built-in
+`crypto` module and an explicit algorithm allowlist (RS256); validate issuer,
+audience, expiry, not-before, client subject, and a `transactions:write` scope.
+Configure the public verification key and expected issuer/audience via
+deployment configuration. Do not expose meter numbers from the existing
 unauthenticated history read operations.
 
 **Rationale**: Middleware enforcement fails closed before service code and
@@ -81,8 +82,9 @@ secret.
 
 **Alternatives considered**: A custom route-only middleware duplicates
 OpenAPI security declarations. A single shared static bearer token cannot
-identify individual clients. A JWT library must be selected at implementation
-time to meet the documented Node.js runtime compatibility.
+identify individual clients. Current JWT packages compatible with Node 10 are
+stale or fall behind current package support, so adding one would either
+violate the runtime baseline or introduce unnecessary dependency risk.
 
 ### HTTP response behavior
 

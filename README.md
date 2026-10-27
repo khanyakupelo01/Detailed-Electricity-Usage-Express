@@ -88,3 +88,43 @@ Future tests should be written to ensure that the response of every request sent
 
 #### models/
 Currently a concept awaiting feedback. The idea is to have the objects defined in the openapi.yaml act as models which are passed between the different modules. This will conform the programmers to interact using defined objects, rather than loosely-defined JSON objects. Given the nature of JavaScript programmers, who want to work with their own bootstrapped parameters, this concept might not work. Keeping this here for future discussion and feedback.
+
+## Electricity purchase transaction ingestion
+
+The purchase transaction endpoint requires these deployment environment
+variables:
+
+- `DATABASE_URL` - PostgreSQL connection URL.
+- `JWT_ISSUER` - expected issuer claim for ingestion tokens.
+- `JWT_AUDIENCE` - expected audience claim for ingestion tokens.
+- `JWT_PUBLIC_KEY` - PEM-encoded RSA public key used to verify RS256 tokens.
+
+Tokens must have a non-empty subject, a valid expiry, the configured issuer
+and audience, and the `transactions:write` scope. Configure verification keys
+and connection credentials in the deployment environment; never commit them.
+
+Before starting the application, apply the schema migration:
+
+```sh
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
+  -f db/migrations/001_create_purchase_transactions.up.sql
+```
+
+To roll back the schema change, after stopping the application and confirming
+that removing these purchase records is acceptable, run:
+
+```sh
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
+  -f db/migrations/001_create_purchase_transactions.down.sql
+```
+
+The updated `POST /api/transactions/` request requires `meterNumber`, a
+positive `amount`, an ISO 8601 `timestamp` with a timezone, and `type: "purchase"`.
+New transactions return HTTP 201; duplicate meter/amount/timestamp combinations
+return HTTP 409. Invalid fields return 400 or 422; missing/invalid tokens return
+401; authenticated tokens without `transactions:write` return 403. Persistence
+errors return a JSON 500 or 503 response without database details.
+
+This request contract is intentionally breaking. Coordinate and complete the
+separately maintained consumer migration before deploying backend validation
+that requires the new fields.

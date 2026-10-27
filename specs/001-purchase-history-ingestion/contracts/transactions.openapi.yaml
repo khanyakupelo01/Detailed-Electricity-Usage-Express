@@ -205,21 +205,19 @@ components:
       properties:
         meterNumber:
           type: string
-          minLength: 1
+          description: A non-empty meter number; surrounding whitespace is trimmed.
           example: '0001234567'
         amount:
           type: number
-          exclusiveMinimum: true
-          minimum: 0
+          description: A finite positive monetary amount.
           example: 250.5
         timestamp:
           type: string
-          format: date-time
+          description: An ISO 8601 date-time containing an explicit timezone.
           example: '2026-09-10T12:30:00+02:00'
         type:
           type: string
-          enum:
-            - purchase
+          description: Must be purchase.
     PurchaseTransaction:
       type: object
       required:

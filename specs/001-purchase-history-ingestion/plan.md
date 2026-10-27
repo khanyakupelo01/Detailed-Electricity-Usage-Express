@@ -19,9 +19,8 @@ expose persisted records.
 
 **Language/Version**: Node.js 10.6+ (CommonJS, per project documentation)
 
-**Primary Dependencies**: Express 4.16; express-openapi-validator 4.13; add a
-PostgreSQL client (`pg`) and a JWT verification library compatible with the
-documented Node runtime.
+**Primary Dependencies**: Express 4.16; express-openapi-validator 4.13; `pg`
+8.13.1 (Node.js 8+); Node's built-in `crypto` for RS256 JWT verification.
 
 **Storage**: PostgreSQL; no current database client, connection configuration,
 schema, or migration framework exists in the repository.
@@ -99,6 +98,8 @@ controllers/
 └── ElectricityController.js     # Existing generated request wrappers
 services/
 └── ElectricityService.js        # Transaction orchestration and response mapping
+middleware/
+└── jwtSecurity.js               # JWT verification and scope authorization
 db/
 ├── pool.js                      # PostgreSQL connection pool
 └── migrations/

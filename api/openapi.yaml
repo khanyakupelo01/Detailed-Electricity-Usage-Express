@@ -70,7 +70,9 @@ paths:
           description: Successful response
           content:
             application/json:
-              example: {transactions: [{id: txn_001, date: "2026-09-10", type: purchase, amount: 250.5}, {id: txn_002, date: "2026-09-25", type: refund, amount: 45}], next_cursor: null}
+              schema:
+                $ref: "#/components/schemas/TransactionHistory"
+              example: {transactions: [{id: txn_001, date: "2026-09-10", timestamp: "2026-09-10T12:30:00Z", type: purchase, amount: 250.5}], next_cursor: null}
         "400":
           description: Invalid request
           content:
@@ -78,10 +80,18 @@ paths:
               example: {message: "request.query.date_from should match format \"date\"", errors: []}
         "503":
           description: Service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Unauthorized
         "500":
           description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "422":
           description: Unprocessable entity
       summary: Retrieve transactions
@@ -105,7 +115,9 @@ paths:
           description: Successful response
           content:
             application/json:
-              example: {id: txn_001, date: "2026-09-10", type: purchase, amount: 250.5}
+              schema:
+                $ref: "#/components/schemas/TransactionHistoryItem"
+              example: {id: txn_001, date: "2026-09-10", timestamp: "2026-09-10T12:30:00Z", type: purchase, amount: 250.5}
         "400":
           description: Invalid request
         "503":
@@ -114,6 +126,10 @@ paths:
           description: Unauthorized
         "500":
           description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "422":
           description: Unprocessable entity
       summary: Retrieve a single transaction by ID
@@ -128,24 +144,60 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/_api_transactions__post_request"
-            example: {date: "2026-09-10", type: purchase, amount: 250.5}
+            example: {meterNumber: "0001234567", timestamp: "2026-09-10T12:30:00+02:00", type: purchase, amount: 250.5}
         required: true
+      security:
+      - bearerAuth: []
       responses:
         "201":
           description: Transaction created successfully
           content:
             application/json:
-              example: {id: txn_001, date: "2026-09-10", type: purchase, amount: 250.5}
+              schema:
+                $ref: "#/components/schemas/CreatedPurchaseTransaction"
+              example: {id: txn_001, meterNumber: "0001234567", timestamp: "2026-09-10T12:30:00+02:00", date: "2026-09-10", type: purchase, amount: 250.5}
         "400":
           description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "503":
           description: Service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Authenticated client is not authorized to ingest
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Duplicate purchase transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DuplicateTransaction"
         "500":
           description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "422":
           description: Unprocessable entity
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
       summary: Create a new transaction
       tags:
       - Electricity
@@ -169,10 +221,18 @@ paths:
           description: Invalid request
         "503":
           description: Service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Unauthorized
         "500":
           description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "422":
           description: Unprocessable entity
       summary: Delete a transaction by ID
@@ -182,6 +242,7 @@ paths:
   /api/transactions/update/{id}:
     put:
       operationId: apiTransactionsUpdateIdPUT
+      x-codegen-request-body-name: apiTransactionsPostRequest
       parameters:
       - explode: false
         in: path
@@ -195,7 +256,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/_api_transactions__post_request"
+              $ref: "#/components/schemas/_api_transactions__put_request"
             example: {date: "2026-09-10", type: purchase, amount: 250.5}
         required: true
       responses:
@@ -212,6 +273,10 @@ paths:
           description: Unauthorized
         "500":
           description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "422":
           description: Unprocessable entity
       summary: Update a transaction by ID
@@ -233,12 +298,98 @@ components:
           example: 250.5
           format: float
           type: number
+        timestamp:
+          example: "2026-09-10T12:30:00Z"
+          format: date-time
+          type: string
       required:
       - amount
       - date
+      - timestamp
       - type
       type: object
+    TransactionHistoryItem:
+      allOf:
+      - $ref: "#/components/schemas/Transaction"
+      - properties:
+          id:
+            type: string
+        required:
+        - id
+        type: object
+    TransactionHistory:
+      properties:
+        transactions:
+          items:
+            $ref: "#/components/schemas/TransactionHistoryItem"
+          type: array
+        next_cursor:
+          nullable: true
+          type: string
+      required:
+      - transactions
+      - next_cursor
+      type: object
+    CreatedPurchaseTransaction:
+      allOf:
+      - $ref: "#/components/schemas/TransactionHistoryItem"
+      - properties:
+          meterNumber:
+            type: string
+        required:
+        - meterNumber
+        type: object
+    DuplicateTransaction:
+      properties:
+        code:
+          enum:
+          - duplicate_transaction
+          type: string
+        message:
+          type: string
+        transactionId:
+          type: string
+      required:
+      - code
+      - message
+      - transactionId
+      type: object
+    ErrorResponse:
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+      required:
+      - code
+      - message
+      type: object
     _api_transactions__post_request:
+      properties:
+        meterNumber:
+          description: A non-empty meter number; surrounding whitespace is trimmed.
+          example: "0001234567"
+          type: string
+        amount:
+          description: A finite positive monetary amount.
+          example: 250.5
+          type: number
+        timestamp:
+          description: An ISO 8601 date-time containing an explicit timezone.
+          example: "2026-09-10T12:30:00+02:00"
+          type: string
+        type:
+          description: Must be purchase.
+          example: purchase
+          type: string
+      additionalProperties: false
+      required:
+      - amount
+      - meterNumber
+      - timestamp
+      - type
+      type: object
+    _api_transactions__put_request:
       properties:
         date:
           example: "2026-09-10"
@@ -256,3 +407,8 @@ components:
       - date
       - type
       type: object
+  securitySchemes:
+    bearerAuth:
+      scheme: bearer
+      type: http
+      bearerFormat: JWT

@@ -7,6 +7,12 @@ const config = {
   BASE_VERSION: '',
   CONTROLLER_DIRECTORY: path.join(__dirname, 'controllers'),
   PROJECT_DIR: __dirname,
+  DATABASE_URL: process.env.DATABASE_URL,
+  JWT_ISSUER: process.env.JWT_ISSUER,
+  JWT_AUDIENCE: process.env.JWT_AUDIENCE,
+  JWT_PUBLIC_KEY: process.env.JWT_PUBLIC_KEY
+    ? process.env.JWT_PUBLIC_KEY.replace(/\\n/g, '\n')
+    : undefined,
 };
 config.OPENAPI_YAML = path.join(config.ROOT_DIR, 'api', 'openapi.yaml');
 config.FULL_PATH = `${config.URL_PATH}:${config.URL_PORT}/${config.BASE_VERSION}`;
